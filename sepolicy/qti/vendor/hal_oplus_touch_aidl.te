@@ -17,5 +17,3 @@ binder_call(hal_oplus_touch_aidl, oplus_touchdaemon)
 
 unix_socket_send(hal_oplus_touch_aidl, oplus_touchdaemon, oplus_touchdaemon)
 
-rw_dir_file(hal_oplus_touch_aidl, oplus_touchdaemon_device)
-rw_dir_file(hal_oplus_touch_aidl, vendor_proc_display)
