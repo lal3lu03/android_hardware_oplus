@@ -1,0 +1,12 @@
+type hal_lineage_livedisplay_qti, domain;
+hal_server_domain(hal_lineage_livedisplay_qti, hal_lineage_livedisplay)
+
+type hal_lineage_livedisplay_qti_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(hal_lineage_livedisplay_qti)
+
+binder_call(hal_lineage_livedisplay_qti, servicemanager)
+
+binder_use(hal_lineage_livedisplay_qti)
+vndbinder_use(hal_lineage_livedisplay_qti)
+
+allow hal_lineage_livedisplay_qti graphics_device:chr_file rw_file_perms;

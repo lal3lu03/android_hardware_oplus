@@ -8,6 +8,7 @@
 // #define LOG_NDEBUG 0
 
 #include <cutils/str_parms.h>
+#include <cutils/properties.h>
 #include <dlfcn.h>
 #include <hardware/audio_amplifier.h>
 #include <hardware/hardware.h>
@@ -96,6 +97,11 @@ static int tfa98xx_start_feedback(void* adev, uint32_t snd_device) {
 
     pcm_dev_tx_id =
             tfa_dev->platform_get_pcm_device_id(tfa_dev->usecase_tx->id, tfa_dev->usecase_tx->type);
+    
+    // The QCOM HAL platform_info parser ignores XML overrides for USECASE_AUDIO_SPKR_CALIB_TX
+    // and returns the hardcoded value (25). We must force it to the correct TFA device (32).
+    pcm_dev_tx_id = property_get_int32("vendor.audio.tfa.pcm.id", 32);
+
     ALOGD("pcm_dev_tx_id = %d", pcm_dev_tx_id);
     if (pcm_dev_tx_id < 0) {
         ALOGE("%d: Invalid pcm device for usecase (%d)", __LINE__, tfa_dev->usecase_tx->id);

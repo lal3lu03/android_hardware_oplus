@@ -19,6 +19,7 @@ ro.vendor.oplus.esim.support    u:object_r:vendor_oplus_esim_prop:s0
 persist.vendor.fingerprint.                    u:object_r:vendor_fingerprint_prop:s0
 persist.vendor.side.fp.near.feature.support    u:object_r:vendor_fingerprint_prop:s0
 persist.vendor.silead_newalgo.                 u:object_r:vendor_fingerprint_prop:s0
+vendor.calibration.fingerprint                 u:object_r:vendor_fingerprint_prop:s0
 vendor.fingerprint.                            u:object_r:vendor_fingerprint_prop:s0
 vendor.oplus.fingerprint.                      u:object_r:vendor_fingerprint_prop:s0
 vendor.silead.                                 u:object_r:vendor_fingerprint_prop:s0

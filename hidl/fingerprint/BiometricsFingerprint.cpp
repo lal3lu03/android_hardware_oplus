@@ -27,6 +27,7 @@ namespace implementation {
 
 BiometricsFingerprint::BiometricsFingerprint()
     : mOplusDisplayFd(open("/dev/oplus_display", O_RDWR)) {
+    LOG(INFO) << "BiometricsFingerprint init: /dev/oplus_display fd=" << mOplusDisplayFd;
     mOplusBiometricsFingerprint = IOplusBiometricsFingerprint::getService();
     mOplusBiometricsFingerprint->setHalCallback(this);
 }
@@ -38,6 +39,7 @@ Return<uint64_t> BiometricsFingerprint::setNotify(
 }
 
 Return<uint64_t> BiometricsFingerprint::preEnroll() {
+    setHbm(1);
     setDimlayerHbm(1);
     return mOplusBiometricsFingerprint->preEnroll();
 }
@@ -48,6 +50,7 @@ Return<RequestStatus> BiometricsFingerprint::enroll(const hidl_array<uint8_t, 69
 }
 
 Return<RequestStatus> BiometricsFingerprint::postEnroll() {
+    setHbm(0);
     setDimlayerHbm(0);
     return mOplusBiometricsFingerprint->postEnroll();
 }
@@ -57,6 +60,7 @@ Return<uint64_t> BiometricsFingerprint::getAuthenticatorId() {
 }
 
 Return<RequestStatus> BiometricsFingerprint::cancel() {
+    setHbm(0);
     setDimlayerHbm(0);
     return mOplusBiometricsFingerprint->cancel();
 }
@@ -75,6 +79,7 @@ Return<RequestStatus> BiometricsFingerprint::setActiveGroup(uint32_t gid,
 }
 
 Return<RequestStatus> BiometricsFingerprint::authenticate(uint64_t operationId, uint32_t gid) {
+    setHbm(1);
     setDimlayerHbm(1);
     return mOplusBiometricsFingerprint->authenticate(operationId, gid);
 }
@@ -84,11 +89,16 @@ Return<bool> BiometricsFingerprint::isUdfps(uint32_t sensorID) {
 }
 
 Return<void> BiometricsFingerprint::onFingerDown(uint32_t x, uint32_t y, float minor, float major) {
+    // Keep panel state in sync with each touch so Goodix can complete UI-ready capture.
+    setHbm(1);
+    setDimlayerHbm(1);
     setFpPress(1);
     return isUff() ? Void() : mOplusBiometricsFingerprint->onFingerDown(x, y, minor, major);
 }
 
 Return<void> BiometricsFingerprint::onFingerUp() {
+    setHbm(0);
+    setDimlayerHbm(0);
     setFpPress(0);
     return isUff() ? Void() : mOplusBiometricsFingerprint->onFingerUp();
 }
@@ -108,6 +118,7 @@ Return<void> BiometricsFingerprint::onAuthenticated(uint64_t deviceId, uint32_t 
                                                     uint32_t groupId,
                                                     const hidl_vec<uint8_t>& token) {
     if (fingerId != 0) {
+        setHbm(0);
         setDimlayerHbm(0);
     }
     setFpPress(0);
@@ -116,6 +127,7 @@ Return<void> BiometricsFingerprint::onAuthenticated(uint64_t deviceId, uint32_t 
 
 Return<void> BiometricsFingerprint::onError(uint64_t deviceId, FingerprintError error,
                                             int32_t vendorCode) {
+    setHbm(0);
     setDimlayerHbm(0);
     setFpPress(0);
     return mClientCallback->onError(deviceId, error, vendorCode);

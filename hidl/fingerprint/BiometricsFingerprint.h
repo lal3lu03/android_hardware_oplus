@@ -17,10 +17,12 @@
 #pragma once
 
 #include <android-base/properties.h>
+#include <android-base/logging.h>
 #include <android-base/strings.h>
 #include <android/hardware/biometrics/fingerprint/2.1/types.h>
 #include <android/hardware/biometrics/fingerprint/2.2/IBiometricsFingerprintClientCallback.h>
 #include <android/hardware/biometrics/fingerprint/2.3/IBiometricsFingerprint.h>
+#include <fcntl.h>
 #include <android/log.h>
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
@@ -109,10 +111,39 @@ class BiometricsFingerprint : public IBiometricsFingerprint,
                                   uint32_t resultLen) override;
 
   private:
+    bool ensureDisplayFd() {
+        if (mOplusDisplayFd >= 0) {
+            return true;
+        }
+
+        mOplusDisplayFd = open("/dev/oplus_display", O_RDWR);
+        if (mOplusDisplayFd < 0) {
+            if (!mDisplayFdOpenFailedLogged) {
+                PLOG(WARNING) << "Failed to open /dev/oplus_display";
+                mDisplayFdOpenFailedLogged = true;
+            }
+            return false;
+        }
+
+        LOG(INFO) << "Opened /dev/oplus_display fd=" << mOplusDisplayFd;
+        mDisplayFdOpenFailedLogged = false;
+        return true;
+    }
+
     bool isUdfps() {
-        // We need to rely on `persist.vendor.fingerprint.sensor_type` here because we can't get our
-        // sensorId from anywhere.
-        return GetProperty("persist.vendor.fingerprint.sensor_type", "") == "optical";
+        const auto sensorType = GetProperty("persist.vendor.fingerprint.sensor_type", "");
+        if (sensorType == "optical" || sensorType == "ultrasonic") {
+            return true;
+        }
+
+        if (mOplusBiometricsFingerprint != nullptr) {
+            const auto ret = mOplusBiometricsFingerprint->isUdfps(0 /* sensorId */);
+            if (ret.isOk()) {
+                return static_cast<bool>(ret);
+            }
+        }
+
+        return false;
     }
 
     bool isUff() {
@@ -120,18 +151,36 @@ class BiometricsFingerprint : public IBiometricsFingerprint,
                                          "UFF ");
     }
 
+    bool panelIoctl(unsigned long request, unsigned int value, const char* name) {
+        if (!ensureDisplayFd()) {
+            return false;
+        }
+
+        if (ioctl(mOplusDisplayFd, request, &value) == 0) {
+            return true;
+        }
+
+        PLOG(WARNING) << name << " ioctl failed with value=" << value;
+        return false;
+    }
+
+    bool setHbm(unsigned int value) {
+        return panelIoctl(PANEL_IOCTL_SET_HBM, value, "PANEL_IOCTL_SET_HBM");
+    }
+
     bool setDimlayerHbm(unsigned int value) {
-        return isUdfps() && ioctl(mOplusDisplayFd, PANEL_IOCTL_SET_DIMLAYER_HBM, &value) == 0;
+        return panelIoctl(PANEL_IOCTL_SET_DIMLAYER_HBM, value, "PANEL_IOCTL_SET_DIMLAYER_HBM");
     }
 
     bool setFpPress(unsigned int value) {
-        return isUdfps() && ioctl(mOplusDisplayFd, PANEL_IOCTL_SET_FP_PRESS, &value) == 0;
+        return panelIoctl(PANEL_IOCTL_SET_FP_PRESS, value, "PANEL_IOCTL_SET_FP_PRESS");
     }
 
     sp<IOplusBiometricsFingerprint> mOplusBiometricsFingerprint;
     sp<V2_1::IBiometricsFingerprintClientCallback> mClientCallback;
 
     int mOplusDisplayFd;
+    bool mDisplayFdOpenFailedLogged = false;
 };
 
 }  // namespace implementation

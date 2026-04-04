@@ -4,7 +4,7 @@
 //
 
 cc_library_shared {
-    name: "audio_amplifier.qcom",
+    name: "audio_amplifier.kona",
     relative_install_path: "hw",
     vendor: true,
     owner: "qti",
